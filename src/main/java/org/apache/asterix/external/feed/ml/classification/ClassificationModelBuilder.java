@@ -82,10 +82,20 @@ public class ClassificationModelBuilder {
     }
 
     public static void main(String[] args) throws Exception {
-        String arffFile = "/Volumes/USBStorage/dataset/weather.txt";
-        String modelDir = "/Volumes/USBStorage/dataset";
+        // WEATHER
+        /*
+        String arffFile = "/Users/thormartin/weka_data/weather.numeric.arff";
+        //String arffFile = "/Users/thormartin/asterix-machine-learning/src/main/resources/data/weather.txt";
+        String modelDir = "/Users/thormartin/asterix-machine-learning/src/main/resources/data";
         String classifierAlgorithm = "RANDOM_FOREST";
+        */
 
+        // TWITTER
+        String arffFile = "/Users/thormartin/asterix-machine-learning/src/main/resources/data/twitter.arff";
+        String modelDir = "/Users/thormartin/asterix-machine-learning/src/main/resources/data";
+        String classifierAlgorithm = "J48";
+
+        /*
         if (args.length < 2) {
             System.err.println("Usage: ClassificationModelBuilder -f inputfile.arff -o /where/to/put/the/model -c"
                     + " classfication-algorithm (e.g., J48)");
@@ -104,6 +114,7 @@ public class ClassificationModelBuilder {
                 System.exit(-1);
             }
         }
+        */
 
         ClassificationModelBuilder cmb = new ClassificationModelBuilder(arffFile, modelDir, classifierAlgorithm);
         cmb.buildModel();

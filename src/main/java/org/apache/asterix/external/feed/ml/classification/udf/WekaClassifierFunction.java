@@ -19,6 +19,8 @@
 package org.apache.asterix.external.feed.ml.classification.udf;
 
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.external.api.IExternalScalarFunction;
@@ -26,6 +28,8 @@ import org.apache.asterix.external.api.IFunctionHelper;
 import org.apache.asterix.external.api.IJObject;
 import org.apache.asterix.external.feed.ml.classification.InstanceClassifier;
 import org.apache.asterix.external.feed.ml.classification.udf.tests.ClassifierTestFunction;
+import org.apache.asterix.external.feed.ml.tools.textanalysis.Features;
+import org.apache.asterix.external.feed.ml.tools.textanalysis.TextAnalyzer;
 import org.apache.asterix.external.library.java.JObjects;
 import org.apache.asterix.external.library.java.JObjects.JRecord;
 import org.apache.asterix.external.library.java.JObjects.JString;
@@ -41,6 +45,8 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
     private InstanceClassifier instanceClassifier;
     private Instance instanceHolder;
     private int classIndex;
+    private Features features;
+    private TextAnalyzer analyzer;
 
     private final String PRIMARY_KEY_NAME = "id";
 
@@ -52,8 +58,10 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
     @Override
     public void initialize(IFunctionHelper functionHelper) throws Exception {
         //TODO Get the necessary files
-        String modelFile = "data/RANDOM_FOREST.model";
-        String featureHeader = "data/weather_header.json";
+        String modelFile = "data/J48.model";
+        String featureHeader = "data/twitter_header.json";
+        //String modelFile = "data/RANDOM_FOREST.model";
+        //String featureHeader = "data/weather_header.json";
 
         LOGGER.info("Initialiazing the classifier function using: " + modelFile + " model, and " + featureHeader + " "
                 + "header file.");
@@ -64,6 +72,9 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
         instanceClassifier = new InstanceClassifier(modelInputStream, headerInputStream);
         instanceHolder = new DenseInstance(instanceClassifier.getDatasetHeader().numAttributes());
         classIndex = instanceClassifier.getDatasetHeader().classIndex();
+        System.out.println("\t DEBUG \t INSTANCE_HOLDER_PRE \t" + instanceHolder.toString());
+        this.features = new Features();
+        this.analyzer = new TextAnalyzer();
     }
 
     @Override
@@ -77,8 +88,19 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
             outputRecord.setValueAtPos(i, inputRecordFields[i]);
         }
 
-        boolean containsClassAttributeField = getInstanceFromRecord(inputRecord);
+        boolean containsClassAttributeField;
+
+        boolean shouldExtractFeatures = true;
+
+        if (shouldExtractFeatures) {
+            JString text = (JString) inputRecord.getValueByName("text");
+            System.out.println("\t \t DEBUG \t TEXT \t" + text.getValue());
+            containsClassAttributeField = extractFeatures(text.getValue());
+        } else {
+            containsClassAttributeField = getInstanceFromRecord(inputRecord);
+        }
         JString classValueString = (JString) functionHelper.getObject(JTypeTag.STRING);
+
         classValueString.setValue(instanceClassifier.classify(instanceHolder));
 
         if (containsClassAttributeField) {
@@ -88,6 +110,7 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
         }
 
         functionHelper.setResult(outputRecord);
+
     }
 
     private boolean getInstanceFromRecord(JRecord inputRecord) throws AsterixException {
@@ -97,7 +120,9 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
         IJObject inputRecordFields[] = inputRecord.getFields();
 
         boolean containsClassAttributeField = false;
+        System.out.println("\t DEBUG \t FIELD_NAMES.LENGTH \t" + fieldNames.length);
         for (int i = 0; i < fieldNames.length; i++) {
+            System.out.println("\t DEBUG \t FIELD_NAMES[i] \t" + fieldNames[i]);
             int attributeIndex = instanceClassifier.getAttributeIndex(fieldNames[i]);
             if (attributeIndex == -1) {
                 if (!fieldNames[i].equals(PRIMARY_KEY_NAME)) {
@@ -107,6 +132,7 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
                 if (classIndex != attributeIndex) { // Ignore the class attribute for now
                     // Extract the attribute value
                     Attribute attribute = instanceClassifier.getDatasetHeader().attribute(attributeIndex);
+                    System.out.println("\t DEBUG \t ATTRIBUTE: " + attribute.toString());
                     switch (fieldType[i].getTypeTag()) {
                         case STRING:
                             instanceHolder.setValue(attribute, ((JString) inputRecordFields[i]).getValue());
@@ -120,6 +146,28 @@ public class WekaClassifierFunction implements IExternalScalarFunction {
                 }
             }
         }
+        System.out.println("\t DEBUG \t INSTANCE_HOLDER_POST \t" + instanceHolder.toString());
         return containsClassAttributeField;
+    }
+
+    private boolean extractFeatures(String text) {
+        analyzer.analyze(text);
+        TextAnalyzer.Term tokens[] = analyzer.getTerms();
+        features.check(tokens);
+        System.out.println("\t DEBUG \t FEATURES \t" + features.getValues());
+
+        String featureNames[] = features.getFeatureNames();
+        String featureTypes[] = features.getFeatureTypes();
+        Integer featureValues[] = features.getFeatureValues();
+
+        for (int i = 0; i < featureNames.length; i++) {
+            Attribute attribute = new Attribute(featureNames[i]);
+            System.out.println("\t \t DEBUG \t ATTRIBUTES \t" + attribute);
+            JObjects.JDouble value = new JObjects.JDouble(featureValues[i]);
+            System.out.println("\t \t DEBUG \t VALUE \t" + value.getValue());
+            instanceHolder.setValue(i, value.getValue());
+        }
+        return false;
+
     }
 }

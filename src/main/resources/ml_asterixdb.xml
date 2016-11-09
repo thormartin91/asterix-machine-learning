@@ -1,13 +1,8 @@
 <externalLibrary xmlns="library">
 	<language>JAVA</language>
 	<libraryFunctions>
-		<libraryFunction>
-		<function_type>SCALAR</function_type>
-			<name>testFunction</name>
-            <arguments>CountryCapitalType</arguments>
-            <return_type>CountryCapitalType</return_type>
-			<definition>org.apache.asterix.external.feed.ml.classification.udf.tests.ClassifierTestFactory</definition>
-		</libraryFunction>
+glog
+        
         <libraryFunction>
             <function_type>SCALAR</function_type>
             <name>toUpper</name>
@@ -28,6 +23,13 @@
 			<arguments>FeatureType</arguments>
 			<return_type>FeatureType</return_type>
 			<definition>org.apache.asterix.external.feed.ml.classification.udf.WekaClassifierFactory</definition>
+		</libraryFunction>
+		<libraryFunction>
+			<function_type>SCALAR</function_type>
+			<name>classifyTweet</name>
+			<arguments>FeatureType</arguments>
+			<return_type>FeatureType</return_type>
+			<definition>org.apache.asterix.external.feed.ml.classification.udf.TweetTokenizerFactory</definition>
 		</libraryFunction>
 		<libraryFunction>
 			<function_type>SCALAR</function_type>
